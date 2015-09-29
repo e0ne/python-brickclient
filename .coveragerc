@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = brickclient
+omit = brickclient/openstack/*
+
+[report]
+ignore_errors = True
