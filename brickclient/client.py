@@ -76,10 +76,20 @@ class Client(object):
                                                        multipath=False,
                                                        enforce_multipath=False)
         connection = client.volumes.initialize_connection(volume_id, conn_prop)
+
+        protocol = connection['driver_volume_type']
+        protocol = protocol.upper()
         brick_connector = self._brick_get_connector(
-            connection['driver_volume_type'])
+            protocol)
 
         device_info = brick_connector.connect_volume(connection['data'])
+        if protocol == 'RBD':
+            # TODO(e0ne): move to attach_rbd_volume() function
+            # TODO(e0ne): use oslo.rootwrap
+            # TODO(e0ne): multipath support
+            pool, volume = connection['data']['name'].split('/')
+            cmd = ['rbd', 'map', volume, '--pool', pool]
+            processutils.execute(*cmd, root_helper='sudo', run_as_root=True)
         client.volumes.attach(volume_id, None, None, host_name=hostname)
         return device_info
 
@@ -94,6 +104,18 @@ class Client(object):
         brick_connector = self._brick_get_connector(
             connection['driver_volume_type'])
 
-        brick_connector.disconnect_volume(connection['data'], None)
+        # TODO(e0ne): use real device info from params
+        device_info = {}
+        brick_connector.disconnect_volume(connection['data'], device_info)
+        protocol = connection['driver_volume_type']
+        protocol = protocol.upper()
+        if protocol == 'RBD':
+            # TODO(e0ne): move to detach_rbd_volume() function
+            # TODO(e0ne): use oslo.rootwrap
+            # TODO(e0ne): multipath support
+            pool, volume = connection['data']['name'].split('/')
+            dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool, volume=volume)
+            cmd = ['rbd', 'unmap', dev_name]
+            processutils.execute(*cmd, root_helper='sudo', run_as_root=True)
         client.volumes.terminate_connection(volume_id, conn_prop)
         client.volumes.detach(volume_id)
