@@ -27,6 +27,7 @@ import itertools
 import logging
 import os
 import pkgutil
+import socket
 import sys
 
 import requests
@@ -654,8 +655,9 @@ class OpenStackBrickShell(object):
                metavar='<identifier>',
                help='Name or other Identifier for existing volume')
     @utils.service_type('volumev2')
-    @utils.arg('hostname',
+    @utils.arg('--hostname',
                metavar='<hostname>',
+               default=socket.gethostname(),
                help='hostname')
     @utils.service_type('volumev2')
     def do_attach(self, client, args):
