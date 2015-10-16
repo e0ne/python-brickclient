@@ -114,7 +114,8 @@ class Client(object):
             # TODO(e0ne): use oslo.rootwrap
             # TODO(e0ne): multipath support
             pool, volume = connection['data']['name'].split('/')
-            dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool, volume=volume)
+            dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool,
+                                                         volume=volume)
             cmd = ['rbd', 'unmap', dev_name]
             processutils.execute(*cmd, root_helper='sudo', run_as_root=True)
         client.volumes.terminate_connection(volume_id, conn_prop)

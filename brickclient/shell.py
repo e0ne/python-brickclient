@@ -661,7 +661,6 @@ class OpenStackBrickShell(object):
                help='hostname')
     @utils.service_type('volumev2')
     def do_attach(self, client, args):
-        # TODO(e0ne): use local hostname by default
         hostname = args.hostname
         volume = args.identifier
         self._init_cinder_client(args.func)
