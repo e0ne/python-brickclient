@@ -79,8 +79,9 @@ class Client(object):
 
         protocol = connection['driver_volume_type']
         protocol = protocol.upper()
+        nfs_mount_point_base = connection.get('mount_point_base')
         brick_connector = self._brick_get_connector(
-            protocol)
+            protocol, nfs_mount_point_base=nfs_mount_point_base)
 
         device_info = brick_connector.connect_volume(connection['data'])
         if protocol == 'RBD':
@@ -101,8 +102,10 @@ class Client(object):
                                                        multipath=False,
                                                        enforce_multipath=False)
         connection = client.volumes.initialize_connection(volume_id, conn_prop)
+        nfs_mount_point_base = connection.get('mount_point_base')
         brick_connector = self._brick_get_connector(
-            connection['driver_volume_type'])
+            connection['driver_volume_type'],
+            nfs_mount_point_base=nfs_mount_point_base)
 
         # TODO(e0ne): use real device info from params
         device_info = {}
@@ -116,6 +119,10 @@ class Client(object):
             pool, volume = connection['data']['name'].split('/')
             dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool, volume=volume)
             cmd = ['rbd', 'unmap', dev_name]
+            processutils.execute(*cmd, root_helper='sudo', run_as_root=True)
+        elif protocol == 'NFS':
+            nfs_share = connection['data']['export']
+            cmd = ['umount', nfs_share]
             processutils.execute(*cmd, root_helper='sudo', run_as_root=True)
         client.volumes.terminate_connection(volume_id, conn_prop)
         client.volumes.detach(volume_id)
