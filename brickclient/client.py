@@ -20,20 +20,9 @@ brickclient implementation
 
 from __future__ import print_function
 
+from brickclient import utils
 from os_brick.initiator import connector
 from oslo_concurrency import processutils
-import socket
-
-
-def _get_my_ip():
-    try:
-        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        csock.connect(('8.8.8.8', 80))
-        (addr, port) = csock.getsockname()
-        csock.close()
-        return addr
-    except socket.error:
-        return None
 
 
 class Client(object):
@@ -46,9 +35,8 @@ class Client(object):
         This automatically populates the required protocol as well
         as the root_helper needed to execute commands.
         """
-        # TODO(e0ne): use oslo.rootwrap
-        root_helper = 'sudo'
-        return connector.InitiatorConnector.factory(protocol, root_helper,
+        return connector.InitiatorConnector.factory(protocol,
+                                                    utils.get_root_helper(),
                                                     driver=driver,
                                                     execute=execute,
                                                     use_multipath=
@@ -58,21 +46,17 @@ class Client(object):
                                                     *args, **kwargs)
 
     def get_connector(self):
-        # TODO(e0ne): use oslo.rootwrap
         # TODO(e0ne): multipath support
-        root_helper = 'sudo'
-        conn_prop = connector.get_connector_properties(root_helper,
-                                                       _get_my_ip(),
+        conn_prop = connector.get_connector_properties(utils.get_root_helper(),
+                                                       utils.get_my_ip(),
                                                        multipath=False,
                                                        enforce_multipath=False)
         return conn_prop
 
     def attach(self, client, volume_id, hostname):
-        # TODO(e0ne): use oslo.rootwrap
         # TODO(e0ne): multipath support
-        root_helper = 'sudo'
-        conn_prop = connector.get_connector_properties(root_helper,
-                                                       _get_my_ip(),
+        conn_prop = connector.get_connector_properties(utils.get_root_helper(),
+                                                       utils.get_my_ip(),
                                                        multipath=False,
                                                        enforce_multipath=False)
         connection = client.volumes.initialize_connection(volume_id, conn_prop)
@@ -85,19 +69,18 @@ class Client(object):
         device_info = brick_connector.connect_volume(connection['data'])
         if protocol == 'RBD':
             # TODO(e0ne): move to attach_rbd_volume() function
-            # TODO(e0ne): use oslo.rootwrap
             # TODO(e0ne): multipath support
             pool, volume = connection['data']['name'].split('/')
             cmd = ['rbd', 'map', volume, '--pool', pool]
-            processutils.execute(*cmd, root_helper='sudo', run_as_root=True)
+            processutils.execute(*cmd, root_helper=utils.get_root_helper(),
+                                 run_as_root=True)
         client.volumes.attach(volume_id, None, None, host_name=hostname)
         return device_info
 
     def detach(self, client, volume_id):
-        # TODO(e0ne): use oslo.rootwrap
         # TODO(e0ne): multipath support
-        conn_prop = connector.get_connector_properties('sudo',
-                                                       _get_my_ip(),
+        conn_prop = connector.get_connector_properties(utils.get_root_helper(),
+                                                       utils.get_my_ip(),
                                                        multipath=False,
                                                        enforce_multipath=False)
         connection = client.volumes.initialize_connection(volume_id, conn_prop)
@@ -111,12 +94,12 @@ class Client(object):
         protocol = protocol.upper()
         if protocol == 'RBD':
             # TODO(e0ne): move to detach_rbd_volume() function
-            # TODO(e0ne): use oslo.rootwrap
             # TODO(e0ne): multipath support
             pool, volume = connection['data']['name'].split('/')
             dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool,
                                                          volume=volume)
             cmd = ['rbd', 'unmap', dev_name]
-            processutils.execute(*cmd, root_helper='sudo', run_as_root=True)
+            processutils.execute(*cmd, root_helper=utils.get_root_helper(),
+                                 run_as_root=True)
         client.volumes.terminate_connection(volume_id, conn_prop)
         client.volumes.detach(volume_id)

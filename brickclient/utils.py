@@ -17,6 +17,7 @@ from __future__ import print_function
 
 import os
 import pkg_resources
+import socket
 import sys
 
 from oslo_utils import encodeutils
@@ -151,3 +152,19 @@ def _load_entry_point(ep_name, name=None):
             return ep.load()
         except (ImportError, pkg_resources.UnknownExtra, AttributeError):
             continue
+
+
+def get_my_ip():
+    try:
+        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        csock.connect(('8.8.8.8', 80))
+        (addr, port) = csock.getsockname()
+        csock.close()
+        return addr
+    except socket.error:
+        return None
+
+
+def get_root_helper():
+    # NOTE (e0ne): We don't use rootwrap now
+    return 'sudo'
