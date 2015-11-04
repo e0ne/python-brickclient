@@ -664,8 +664,8 @@ class OpenStackBrickShell(object):
         hostname = args.hostname
         volume = args.identifier
         self._init_cinder_client(args.func)
-        device_info = client.attach(self.volumes_client,
-                                    volume,
+        client.volumes_client = self.volumes_client
+        device_info = client.attach(volume,
                                     hostname)
 
         utils.print_dict(device_info)
@@ -677,7 +677,8 @@ class OpenStackBrickShell(object):
     def do_detach(self, client, args):
         volume = args.identifier
         self._init_cinder_client(args.func)
-        client.detach(self.volumes_client, volume)
+        client.volumes_client = self.volumes_client
+        client.detach(volume)
 
     def get_v2_auth(self, v2_auth_url):
 

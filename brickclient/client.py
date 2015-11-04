@@ -26,6 +26,9 @@ from oslo_concurrency import processutils
 
 
 class Client(object):
+    def __init__(self, volumes_client=None):
+        self.volumes_client = volumes_client
+
     def _brick_get_connector(self, protocol, driver=None,
                              execute=processutils.execute,
                              use_multipath=False,
@@ -45,21 +48,23 @@ class Client(object):
                                                     device_scan_attempts,
                                                     *args, **kwargs)
 
-    def get_connector(self):
-        # TODO(e0ne): multipath support
+    def get_connector(self, multipath=False, enforce_multipath=False):
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
-                                                       multipath=False,
-                                                       enforce_multipath=False)
+                                                       multipath=multipath,
+                                                       enforce_multipath=
+                                                       enforce_multipath)
         return conn_prop
 
-    def attach(self, client, volume_id, hostname):
-        # TODO(e0ne): multipath support
+    def attach(self, volume_id, hostname, multipath=False,
+               enforce_multipath=False):
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
-                                                       multipath=False,
-                                                       enforce_multipath=False)
-        connection = client.volumes.initialize_connection(volume_id, conn_prop)
+                                                       multipath=multipath,
+                                                       enforce_multipath=
+                                                       enforce_multipath)
+        connection = self.volumes_client.volumes.initialize_connection(
+            volume_id, conn_prop)
 
         protocol = connection['driver_volume_type']
         protocol = protocol.upper()
@@ -70,21 +75,22 @@ class Client(object):
         device_info = brick_connector.connect_volume(connection['data'])
         if protocol == 'RBD':
             # TODO(e0ne): move to attach_rbd_volume() function
-            # TODO(e0ne): multipath support
             pool, volume = connection['data']['name'].split('/')
             cmd = ['rbd', 'map', volume, '--pool', pool]
             processutils.execute(*cmd, root_helper=utils.get_root_helper(),
                                  run_as_root=True)
-        client.volumes.attach(volume_id, None, None, host_name=hostname)
+        self.volumes_client.volumes.attach(volume_id, None, None,
+                                           host_name=hostname)
         return device_info
 
-    def detach(self, client, volume_id):
-        # TODO(e0ne): multipath support
+    def detach(self, volume_id, multipath=False, enforce_multipath=False):
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
-                                                       multipath=False,
-                                                       enforce_multipath=False)
-        connection = client.volumes.initialize_connection(volume_id, conn_prop)
+                                                       multipath=multipath,
+                                                       enforce_multipath=
+                                                       enforce_multipath)
+        connection = self.volumes_client.volumes.initialize_connection(
+            volume_id, conn_prop)
         nfs_mount_point_base = connection.get('mount_point_base')
         brick_connector = self._brick_get_connector(
             connection['driver_volume_type'],
@@ -97,7 +103,6 @@ class Client(object):
         protocol = protocol.upper()
         if protocol == 'RBD':
             # TODO(e0ne): move to detach_rbd_volume() function
-            # TODO(e0ne): multipath support
             pool, volume = connection['data']['name'].split('/')
             dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool,
                                                          volume=volume)
@@ -110,5 +115,5 @@ class Client(object):
             cmd = ['umount', nfs_share]
             processutils.execute(*cmd, root_helper=utils.get_root_helper(),
                                  run_as_root=True)
-        client.volumes.terminate_connection(volume_id, conn_prop)
-        client.volumes.detach(volume_id)
+        self.volumes_client.volumes.terminate_connection(volume_id, conn_prop)
+        self.volumes_client.volumes.detach(volume_id)
