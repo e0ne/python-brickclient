@@ -171,7 +171,7 @@ def get_root_helper():
     return 'sudo'
 
 
-def execute(cmd):
+def safe_execute(cmd):
     try:
         processutils.execute(*cmd, root_helper=get_root_helper(),
                              run_as_root=True)
