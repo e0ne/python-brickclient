@@ -56,8 +56,8 @@ class Client(object):
                                                        enforce_multipath)
         return conn_prop
 
-    def attach(self, volume_id, hostname, multipath=False,
-               enforce_multipath=False):
+    def attach(self, volume_id, hostname, mountpoint=None, mode='rw',
+               multipath=False, enforce_multipath=False):
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
                                                        multipath=multipath,
@@ -79,7 +79,9 @@ class Client(object):
             cmd = ['rbd', 'map', volume, '--pool', pool]
             processutils.execute(*cmd, root_helper=utils.get_root_helper(),
                                  run_as_root=True)
-        self.volumes_client.volumes.attach(volume_id, None, None,
+        self.volumes_client.volumes.attach(volume_id, instance_uuid=None,
+                                           mountpoint=None,
+                                           mode=mode,
                                            host_name=hostname)
         return device_info
 
