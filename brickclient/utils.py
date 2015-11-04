@@ -20,6 +20,7 @@ import pkg_resources
 import socket
 import sys
 
+from oslo_concurrency import processutils
 from oslo_utils import encodeutils
 import prettytable
 import six
@@ -168,3 +169,15 @@ def get_my_ip():
 def get_root_helper():
     # NOTE (e0ne): We don't use rootwrap now
     return 'sudo'
+
+
+def execute(cmd):
+    try:
+        processutils.execute(*cmd, root_helper=get_root_helper(),
+                             run_as_root=True)
+    except processutils.ProcessExecutionError as e:
+        print_function(
+            'Command "{0}" execution returned {1} exit code:'.format(
+                e.cmd, e.exit_code))
+        print_function('Stderr: {0}'.format(e.stderr))
+        print_function('Stdout: {0}'.format(e.stdout))

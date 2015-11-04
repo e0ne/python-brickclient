@@ -77,8 +77,8 @@ class Client(object):
             # TODO(e0ne): move to attach_rbd_volume() function
             pool, volume = connection['data']['name'].split('/')
             cmd = ['rbd', 'map', volume, '--pool', pool]
-            processutils.execute(*cmd, root_helper=utils.get_root_helper(),
-                                 run_as_root=True)
+            utils.safe_execute(cmd)
+
         self.volumes_client.volumes.attach(volume_id, instance_uuid=None,
                                            mountpoint=None,
                                            mode=mode,
@@ -109,13 +109,11 @@ class Client(object):
             dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool,
                                                          volume=volume)
             cmd = ['rbd', 'unmap', dev_name]
-            processutils.execute(*cmd,
-                                 root_helper=utils.get_root_helper(),
-                                 run_as_root=True)
+            utils.safe_execute(cmd)
         elif protocol == 'NFS':
             nfs_share = connection['data']['export']
             cmd = ['umount', nfs_share]
-            processutils.execute(*cmd, root_helper=utils.get_root_helper(),
-                                 run_as_root=True)
+            utils.safe_execute(cmd)
+
         self.volumes_client.volumes.terminate_connection(volume_id, conn_prop)
         self.volumes_client.volumes.detach(volume_id)
