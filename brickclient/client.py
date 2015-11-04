@@ -74,10 +74,7 @@ class Client(object):
 
         device_info = brick_connector.connect_volume(connection['data'])
         if protocol == connector.RBD:
-            # TODO(e0ne): move to attach_rbd_volume() function
-            pool, volume = connection['data']['name'].split('/')
-            cmd = ['rbd', 'map', volume, '--pool', pool]
-            utils.safe_execute(cmd)
+            self._attach_rbd_volume(connection)
 
         self.volumes_client.volumes.attach(volume_id, instance_uuid=None,
                                            mountpoint=None,
@@ -104,16 +101,26 @@ class Client(object):
         protocol = connection['driver_volume_type']
         protocol = protocol.upper()
         if protocol == connector.RBD:
-            # TODO(e0ne): move to detach_rbd_volume() function
-            pool, volume = connection['data']['name'].split('/')
-            dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool,
-                                                         volume=volume)
-            cmd = ['rbd', 'unmap', dev_name]
-            utils.safe_execute(cmd)
+            self._detach_rbd_volume(connection)
         elif protocol == connector.NFS:
-            nfs_share = connection['data']['export']
-            cmd = ['umount', nfs_share]
-            utils.safe_execute(cmd)
+            self._detach_nfs_volume(connection)
 
         self.volumes_client.volumes.terminate_connection(volume_id, conn_prop)
         self.volumes_client.volumes.detach(volume_id)
+
+    def _attach_rbd_volume(self, connection):
+        pool, volume = connection['data']['name'].split('/')
+        cmd = ['rbd', 'map', volume, '--pool', pool]
+        utils.safe_execute(cmd)
+
+    def _detach_rbd_volume(self, connection):
+        pool, volume = connection['data']['name'].split('/')
+        dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool,
+                                                     volume=volume)
+        cmd = ['rbd', 'unmap', dev_name]
+        utils.safe_execute(cmd)
+
+    def _detach_nfs_volume(self, connection):
+        nfs_share = connection['data']['export']
+        cmd = ['umount', nfs_share]
+        utils.safe_execute(cmd)
