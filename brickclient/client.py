@@ -73,7 +73,7 @@ class Client(object):
             protocol, nfs_mount_point_base=nfs_mount_point_base)
 
         device_info = brick_connector.connect_volume(connection['data'])
-        if protocol == 'RBD':
+        if protocol == connector.RBD:
             # TODO(e0ne): move to attach_rbd_volume() function
             pool, volume = connection['data']['name'].split('/')
             cmd = ['rbd', 'map', volume, '--pool', pool]
@@ -103,14 +103,14 @@ class Client(object):
         brick_connector.disconnect_volume(connection['data'], device_info)
         protocol = connection['driver_volume_type']
         protocol = protocol.upper()
-        if protocol == 'RBD':
+        if protocol == connector.RBD:
             # TODO(e0ne): move to detach_rbd_volume() function
             pool, volume = connection['data']['name'].split('/')
             dev_name = '/dev/rbd/{pool}/{volume}'.format(pool=pool,
                                                          volume=volume)
             cmd = ['rbd', 'unmap', dev_name]
             utils.safe_execute(cmd)
-        elif protocol == 'NFS':
+        elif protocol == connector.NFS:
             nfs_share = connection['data']['export']
             cmd = ['umount', nfs_share]
             utils.safe_execute(cmd)
