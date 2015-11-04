@@ -85,7 +85,8 @@ class Client(object):
                                            host_name=hostname)
         return device_info
 
-    def detach(self, volume_id, multipath=False, enforce_multipath=False):
+    def detach(self, volume_id, multipath=False, enforce_multipath=False,
+               device_info=None):
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
                                                        multipath=multipath,
@@ -98,8 +99,7 @@ class Client(object):
             connection['driver_volume_type'],
             nfs_mount_point_base=nfs_mount_point_base)
 
-        # TODO(e0ne): use real device info from params
-        device_info = {}
+        device_info = device_info or {}
         brick_connector.disconnect_volume(connection['data'], device_info)
         protocol = connection['driver_volume_type']
         protocol = protocol.upper()
