@@ -24,6 +24,7 @@ import argparse
 import glob
 import imp
 import itertools
+import json
 import logging
 import os
 import pkgutil
@@ -54,6 +55,14 @@ import six.moves.urllib.parse as urlparse
 OS_VOLUME_API_VERSION = "2"
 DEFAULT_CINDER_ENDPOINT_TYPE = 'publicURL'
 DEFAULT_CINDER_SERVICE_TYPE = 'volumev2'
+
+VOLUME_ID_HELP_MESSAGE = 'Name or other Identifier for existing volume'
+MULTIPATH_HELP_MESSAGE = ('Set True if connector wants to use multipath.'
+                          'Default value is False.')
+ENFORCE_MULTIPATH_HELP_MESSAGE = (
+    'If enforce_multipath=True is specified too, an exception is thrown when '
+    'multipathd is not running. Otherwise, it falls back to multipath=False '
+    'and only the first path shown up is used.')
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -646,19 +655,45 @@ class OpenStackBrickShell(object):
         else:
             self.parser.print_help()
 
+    @utils.arg('--multipath',
+               metavar='<multipath>',
+               default=False,
+               help=MULTIPATH_HELP_MESSAGE)
+    @utils.arg('--enforce_multipath',
+               metavar='<enforce_multipath>',
+               default=False,
+               help=ENFORCE_MULTIPATH_HELP_MESSAGE)
     def do_connector(self, client, args):
         """Get the connection properties for all protocols."""
 
-        utils.print_dict(client.get_connector())
+        connector = client.get_connector(args.multipath,
+                                         args.enforce_multipath)
+        utils.print_dict(connector)
 
     @utils.arg('identifier',
                metavar='<identifier>',
-               help='Name or other Identifier for existing volume')
+               help=VOLUME_ID_HELP_MESSAGE)
     @utils.service_type('volumev2')
     @utils.arg('--hostname',
                metavar='<hostname>',
                default=socket.gethostname(),
                help='hostname')
+    @utils.arg('--mountpoint',
+               metavar='<mountpoint>',
+               default=None,
+               help='mountpoint')
+    @utils.arg('--mode',
+               metavar='<mode>',
+               default='rw',
+               help='mode')
+    @utils.arg('--multipath',
+               metavar='<multipath>',
+               default=False,
+               help=MULTIPATH_HELP_MESSAGE)
+    @utils.arg('--enforce_multipath',
+               metavar='<enforce_multipath>',
+               default=False,
+               help=ENFORCE_MULTIPATH_HELP_MESSAGE)
     @utils.service_type('volumev2')
     def do_attach(self, client, args):
         hostname = args.hostname
@@ -666,22 +701,44 @@ class OpenStackBrickShell(object):
         self._init_cinder_client(args.func)
         client.volumes_client = self.volumes_client
         device_info = client.attach(volume,
-                                    hostname)
+                                    hostname,
+                                    args.mountpoint,
+                                    args.mode,
+                                    args.multipath,
+                                    args.enforce_multipath)
 
         utils.print_dict(device_info)
 
     @utils.arg('identifier',
                metavar='<identifier>',
-               help='Name or other Identifier for existing volume')
+               help=VOLUME_ID_HELP_MESSAGE)
+    @utils.arg('--attachment_uuid',
+               metavar='<attachment_uuid>',
+               default=None,
+               help='The uuid of the volume attachment.')
+    @utils.arg('--multipath',
+               metavar='<multipath>',
+               default=False,
+               help=MULTIPATH_HELP_MESSAGE)
+    @utils.arg('--enforce_multipath',
+               metavar='<enforce_multipath>',
+               default=False,
+               help=ENFORCE_MULTIPATH_HELP_MESSAGE)
+    @utils.arg('--device_info',
+               metavar='<device_info>',
+               default=None,
+               help='The device_info is returned from connect_volume.')
     @utils.service_type('volumev2')
     def do_detach(self, client, args):
         volume = args.identifier
         self._init_cinder_client(args.func)
         client.volumes_client = self.volumes_client
-        client.detach(volume)
+        device_info = json.joads(args.device_info)
+
+        client.detach(volume, args.attachment_uuid, args.multipath,
+                      args.enforce_multipath, device_info)
 
     def get_v2_auth(self, v2_auth_url):
-
         username = self.options.os_username
         password = self.options.os_password
         tenant_id = self.options.os_tenant_id

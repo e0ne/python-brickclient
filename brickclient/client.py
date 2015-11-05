@@ -82,8 +82,8 @@ class Client(object):
                                            host_name=hostname)
         return device_info
 
-    def detach(self, volume_id, multipath=False, enforce_multipath=False,
-               device_info=None):
+    def detach(self, volume_id, attachment_uuid=None, multipath=False,
+               enforce_multipath=False, device_info=None):
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
                                                        multipath=multipath,
@@ -106,7 +106,7 @@ class Client(object):
             self._detach_nfs_volume(connection)
 
         self.volumes_client.volumes.terminate_connection(volume_id, conn_prop)
-        self.volumes_client.volumes.detach(volume_id)
+        self.volumes_client.volumes.detach(volume_id, attachment_uuid)
 
     def _attach_rbd_volume(self, connection):
         pool, volume = connection['data']['name'].split('/')
