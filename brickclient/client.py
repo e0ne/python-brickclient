@@ -20,9 +20,12 @@ brickclient implementation
 
 from __future__ import print_function
 
-from brickclient import utils
+from cinderclient import exceptions as cinder_exceptions
 from os_brick.initiator import connector
 from oslo_concurrency import processutils
+
+from brickclient import exceptions
+from brickclient import utils
 
 
 class Client(object):
@@ -58,6 +61,14 @@ class Client(object):
 
     def attach(self, volume_id, hostname, mountpoint=None, mode='rw',
                multipath=False, enforce_multipath=False):
+        # Reserve volume before attachment
+        try:
+            self.volumes_client.reserve(volume_id)
+        except cinder_exceptions.BadRequest as e:
+            msg = "Can't reserve volume {0} for attachment".format(volume_id,
+                                                                   e.message)
+            raise exceptions.BadRequest(msg)
+
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
                                                        multipath=multipath,
@@ -84,6 +95,13 @@ class Client(object):
 
     def detach(self, volume_id, attachment_uuid=None, multipath=False,
                enforce_multipath=False, device_info=None):
+        # Set detaching state for volume
+        try:
+            self.volumes_client.begin_detaching(volume_id)
+        except cinder_exceptions.BadRequest as e:
+            msg = "Can't start volume {0} detaching".format(volume_id,
+                                                            e.message)
+            raise exceptions.BadRequest(msg)
         conn_prop = connector.get_connector_properties(utils.get_root_helper(),
                                                        utils.get_my_ip(),
                                                        multipath=multipath,
