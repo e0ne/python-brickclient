@@ -29,6 +29,8 @@ from brickclient import utils
 
 
 class Client(object):
+    version = '1.0.0'
+
     def __init__(self, volumes_client=None):
         self.volumes_client = volumes_client
 
