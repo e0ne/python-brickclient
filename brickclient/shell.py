@@ -733,7 +733,9 @@ class OpenStackBrickShell(object):
         volume = args.identifier
         self._init_cinder_client(args.func)
         client.volumes_client = self.volumes_client
-        device_info = json.joads(args.device_info)
+        device_info = None
+        if args.device_info:
+            device_info = json.joads(args.device_info)
 
         client.detach(volume, args.attachment_uuid, args.multipath,
                       args.enforce_multipath, device_info)

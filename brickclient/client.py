@@ -65,7 +65,7 @@ class Client(object):
                multipath=False, enforce_multipath=False):
         # Reserve volume before attachment
         try:
-            self.volumes_client.reserve(volume_id)
+            self.volumes_client.volumes.reserve(volume_id)
         except cinder_exceptions.BadRequest as e:
             msg = "Can't reserve volume {0} for attachment".format(volume_id,
                                                                    e.message)
@@ -99,7 +99,7 @@ class Client(object):
                enforce_multipath=False, device_info=None):
         # Set detaching state for volume
         try:
-            self.volumes_client.begin_detaching(volume_id)
+            self.volumes_client.volumes.begin_detaching(volume_id)
         except cinder_exceptions.BadRequest as e:
             msg = "Can't start volume {0} detaching".format(volume_id,
                                                             e.message)
